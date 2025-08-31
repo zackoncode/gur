@@ -1,5 +1,5 @@
 <?php
-    
+
 
 
 ini_set('display_errors', 1);
@@ -27,9 +27,10 @@ if (strpos($uri, $basepath) === 0) {
 }
 $uri = $uri === '' ? '/' : $uri;
 $routes = [
-    "/" => ["app\controller\HomeController", "index"],
+    "/" => ["App\Controller\HomeController", "index"],
     "/user/register" => ["App\Controller\UserController", "register"],
     "/user/login" => ["App\Controller\UserController", "login"],
+    "/dashboard" => ["App\Controller\UserController", "isAdmin"],
 ];
 
 
@@ -47,8 +48,7 @@ try {
     }
 
     $controller = new $controllerClass();
-    $controllerTeste = new LoginController();
-    $controllerTeste->login("admin@gmail.com", "123");
+
     echo $_SESSION['user']['name'];
 
 

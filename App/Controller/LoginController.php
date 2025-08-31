@@ -3,6 +3,9 @@
 namespace App\Controller;
 
 use App\Core\Database;
+use App\Models\User;
+use App\Repositories\UserRepository;
+use UserController;
 
 class LoginController
 {
@@ -37,21 +40,22 @@ class LoginController
         if ($user && password_verify($password, $user['password'])) {
 
             $_SESSION['user'] = [
-                'id' =>
-                $user['id'],
+                'id' => $user['id'],
                 'name' => $user['name'],
-                'role' => "user",
+                'role' => $user['role'],
             ];
+
+            if ($user['role'] === "admin") {
+                header("Location: /hospital/dashboard");
+                exit;
+            }
             echo "logado";
         } else {
             echo "N logado";
         }
     }
-    public function register($email, $name, $password)
+    public function register(string $email, string $name, string $password): array
     {
-        //$name = $_POST['name'];
-        // $email = $_POST['email'];
-        //$password = $_POST['password'];
 
         $emailSanitized = filter_var($email, FILTER_SANITIZE_EMAIL);
         if (!filter_var($emailSanitized, FILTER_VALIDATE_EMAIL)) {
@@ -61,11 +65,20 @@ class LoginController
         $passwordHashed = password_hash($password, PASSWORD_DEFAULT);
 
         try {
-            $stmt = $this->pdo->prepare("INSERT INTO usuarios(name,email,password) VALUES (:name,:email,:password)");
-            $stmt->execute([':name' => $name, ':email' => $emailSanitized, ':password' => $passwordHashed]);
-            return ["success" => true, "message" => "Cadastro realizado"];
+            $userRepository = new UserRepository();
+            $user = new User(null, $name, $emailSanitized, $passwordHashed);
+            $id = $userRepository->save($user);
+
+            return [
+                "success" => true,
+                "message" => "Usuário cadastrado com sucesso",
+                "id" => $id
+            ];
         } catch (\PDOException $e) {
-            return ["success" => false, "message" => $e->getMessage()];
+            return [
+                "success" => false,
+                "message" => "Erro ao cadastrar usuário: " . $e->getMessage()
+            ];
         }
     }
 }
