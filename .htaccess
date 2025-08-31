@@ -1,0 +1,10 @@
+RewriteEngine On
+RewriteBase /hospital   
+
+# Redireciona tudo para index.php, mas mantém arquivos reais
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php?url=$1 [QSA,L]
+
+# Alternativa mais simples:
+# RewriteRule ^(.*)$ index.php [QSA,L]

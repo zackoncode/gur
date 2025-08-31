@@ -7,51 +7,101 @@ use App\Models\User;
 use App\Repositories\UserRepository;
 use UserController;
 
-class LoginController
+class LoginController extends Controller
 {
 
-    private $pdo;
-
+    private $userRepository;
     public function __construct()
     {
-        $db = new Database();
-        $this->pdo = $db->getConnection();
+        parent::__construct();
+        $this->userRepository = new UserRepository();
+    }
+
+    public function viewLogin()
+    {
+        return $this->view('login');
     }
 
 
-
-
-    public function login(String $email, string $password)
+    public function login()
     {
+        error_log("=== INICIANDO LOGIN ===");
+        error_log("Método: " . $_SERVER['REQUEST_METHOD']);
+        error_log("POST data: " . print_r($_POST, true));
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            error_log("Erro: Não é método POST");
+            $_SESSION['login_error'] = "Método inválido";
+            header("Location: /hospital/login");
+            exit();
+        }
+
+        $email = $_POST['email'] ?? '';
+        $password = $_POST['password'] ?? '';
+
+        error_log("Email: $email, Password: $password");
+
+        if (empty($email) || empty($password)) {
+            error_log("Erro: Campos vazios");
+            $_SESSION['login_error'] = "Email e senha são obrigatórios";
+            header("Location: /hospital/login");
+            exit();
+        }
+
         $emailSanitized = filter_var($email, FILTER_SANITIZE_EMAIL);
         if (!filter_var($emailSanitized, FILTER_VALIDATE_EMAIL)) {
-            die("Email invalido");
-        };
-        $db = new Database();
-        $pdo = $db->getConnection();
+            error_log("Erro: Email inválido");
+            $_SESSION['login_error'] = "Email inválido";
+            header("Location: /hospital/login");
+            exit();
+        }
 
+        try {
+            $user = new User();
+            $user->setEmail($emailSanitized);
+            $user->setPassword($password);
 
+            error_log("Antes de autenticar...");
+            $userAuthenticated = $this->userRepository->authenticate($user);
+            error_log("Resultado autenticação: " . print_r($userAuthenticated, true));
 
-        $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE email = :email");
-        $stmt->execute([':email' => $email]);
-        $user = $stmt->fetch();
+            if (!$userAuthenticated) {
+                error_log("Erro: Autenticação falhou");
+                $_SESSION['login_error'] = "Credenciais inválidas";
+                header("Location: /hospital/login");
+                exit();
+            }
 
-
-        if ($user && password_verify($password, $user['password'])) {
+            error_log("Usuário autenticado: " . $userAuthenticated['email']);
 
             $_SESSION['user'] = [
-                'id' => $user['id'],
-                'name' => $user['name'],
-                'role' => $user['role'],
+                'id' => $userAuthenticated['id'],
+                'email' => $userAuthenticated['email'],
+                'name' => $userAuthenticated['name'],
+                'role' => $userAuthenticated['role'],
             ];
 
-            if ($user['role'] === "admin") {
-                header("Location: /hospital/dashboard");
-                exit;
-            }
-            echo "logado";
-        } else {
-            echo "N logado";
+            error_log("Sessão criada: " . print_r($_SESSION, true));
+
+            session_regenerate_id(true);
+
+            $redirectUrl = $userAuthenticated['role'] === 'admin'
+                ? '/hospital/dashboard'
+                : '/hospital/';
+
+            error_log("Redirecionando para: $redirectUrl");
+            header("Location: " . $redirectUrl);
+            exit();
+        } catch (\Exception $e) {
+            error_log("=== EXCEÇÃO DETALHADA ===");
+            error_log("Mensagem: " . $e->getMessage());
+            error_log("Arquivo: " . $e->getFile());
+            error_log("Linha: " . $e->getLine());
+            error_log("Trace: " . $e->getTraceAsString());
+
+            $_SESSION['login_error'] = "Erro interno do sistema: " . $e->getMessage();
+            header("Location: /hospital/login");
+            exit();
         }
     }
     public function register(string $email, string $name, string $password): array

@@ -8,10 +8,7 @@
 </head>
 
 <body>
-    <?php foreach ($users as $user):
-        echo $user;
-    endforeach; ?>
-
+  <h1>index pagina inical</h1>
 </body>
 
 </html>
