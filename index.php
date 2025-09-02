@@ -21,12 +21,7 @@ spl_autoload_register(function ($className) {
     }
 });
 
-$routes = [
-    '/' => "App\Controller\HomeController@index",
-    '/dashboard' => "App\Controller\UserController@isAdmin",
-    '/login' => "App\Controller\LoginController@viewLogin",
-    '/login/auth'=> "App\Controller\LoginController@login"
-];
+require_once "./App/Core/Routes.php";
 
 // CORREÇÃO IMPORTANTE: Remover o path base se necessário
 $requestUri = $_SERVER['REQUEST_URI'];

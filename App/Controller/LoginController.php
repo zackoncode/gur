@@ -3,25 +3,29 @@
 namespace App\Controller;
 
 use App\Core\Database;
+use App\Core\TokenCsfr;
 use App\Models\User;
 use App\Repositories\UserRepository;
-use UserController;
 
 class LoginController extends Controller
 {
-
     private $userRepository;
+    private $csrf;
+
     public function __construct()
     {
         parent::__construct();
         $this->userRepository = new UserRepository();
+        $this->csrf = new TokenCsfr(); // Inicializa o CSRF
     }
 
     public function viewLogin()
     {
-        return $this->view('login');
+        return $this->view('login', [
+            'title' => "Login",
+            'csrf_field' => $this->csrf->getTokenField() // Passa o campo CSRF para a view
+        ]);
     }
-
 
     public function login()
     {
@@ -35,6 +39,16 @@ class LoginController extends Controller
             header("Location: /hospital/login");
             exit();
         }
+
+        //  VALIDAÇÃO DO TOKEN CSRF 
+        $submittedToken = $_POST['token_csrf'] ?? '';
+        if (!$this->csrf->validateToken($submittedToken)) {
+            error_log("Erro: Token CSRF inválido");
+            $_SESSION['login_error'] = "Token de segurança inválido. Tente novamente.";
+            header("Location: /hospital/login");
+            exit();
+        }
+        //  FIM VALIDAÇÃO CSRF 
 
         $email = $_POST['email'] ?? '';
         $password = $_POST['password'] ?? '';
@@ -82,7 +96,7 @@ class LoginController extends Controller
             ];
 
             error_log("Sessão criada: " . print_r($_SESSION, true));
-
+        
             session_regenerate_id(true);
 
             $redirectUrl = $userAuthenticated['role'] === 'admin'
@@ -104,9 +118,9 @@ class LoginController extends Controller
             exit();
         }
     }
+
     public function register(string $email, string $name, string $password): array
     {
-
         $emailSanitized = filter_var($email, FILTER_SANITIZE_EMAIL);
         if (!filter_var($emailSanitized, FILTER_VALIDATE_EMAIL)) {
             return ["success" => false, "message" => "Email inválido"];
